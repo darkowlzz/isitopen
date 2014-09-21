@@ -1,20 +1,20 @@
 var express = require('express'),
     morgan = require('morgan'),
     bodyParser = require('body-parser'),
-    request = require('request'),
     Q = require('q'),
     config = require('./config.js'),
     db = require('orchestrate')(config.db),
-    uuid = require('node-uuid');
+    uuid = require('node-uuid'),
+    helper = require('./helper');
 
 var app = express();
 
 
-//app.use(morgan('combined'));
+app.use(morgan('combined'));
 app.use(bodyParser.json());
 
 app.get('/place/:id', function(req, res, next) {
-  return getProperty('places', req.params.id)
+  return helper.getProperty('places', req.params.id)
            .then(function(response) {
              res.send(response.data);
            });
@@ -22,62 +22,54 @@ app.get('/place/:id', function(req, res, next) {
 
 app.post('/place/create', function(req, res, next) {
   var r = req.body;
+  var coord;
+  if (r.coordinates) {
+    coord = helper.getNumberArray(r.coordinates);
+  }
   var aPlace = {
     place: r.name,
     location: r.location || 'unknown',
-    coordinates: r.coordinates || 'unknown',
+    coordinates: coord || 'unknown',
     status: false,
     tags: r.tags || 'unknown',
     products: r.products || 'unknown',
     desc: r.description || 'unknown',
     createdBy: r.user || 'unknown',
-    id: 'unknown',
+    id: '',
     apiKey: r.apikey || 'unknown',
     lastUpdated: 'unknown'
   };
-  return putProperty('places', aPlace.place, aPlace)
+
+  return helper.getProperty('stats', 'counts')
            .then(function(response) {
-             res.send(response);
+             var count = response.data.value || 0;
+             response.data.value = count + 1;
+             aPlace.id = response.data.value;
+            
+             helper.putProperty('places', aPlace.id, aPlace)
+               .then(function(resp) {
+                 if (resp == true) {
+                   helper.putProperty('stats', 'idCounter',
+                                       response.data, response.ref)
+                     .then(function(resp) {
+                       if (resp == true)
+                         res.send('place created');
+                       else
+                         res.send('failed to create');
+                     })
+                 } else {
+                   res.send('failed to insert');
+                 }
+               })
+               .fail(function(err) {
+                 res.send('failed to create new place');
+               })
+           })
+           .fail(function(err) {
+             res.send('failed to get count');
            });
+
 });
-
-function getProperty(collection, key) {
-  var deferred = Q.defer();
-  db.get(collection, key)
-    .then(function(response) {
-      var ref = response.headers.etag;
-
-      deferred.resolve({
-        ref: ref,
-        data: response.body
-      });
-    })
-    .fail(function(response) {
-      console.log('failed! maybe because the element is not found');
-      deferred.resolve({
-        data: "Error! Maybe because the query failed"
-      });
-    });
-  return deferred.promise;
-};
-exports.getProperty = function(collection, key) {
-  return getProperty(collection, key);
-};
-
-function putProperty(collection, key, data) {
-  var deferred = Q.defer();
-  db.put(collection, key, data)
-    .then(function(response) {
-      deferred.resolve('place created successfully');
-    })
-    .fail(function(err) {
-      deferred.resolve('error while creating place');
-    });
-  return deferred.promise;
-}
-exports.putProperty = function(collection, key, data) {
-  return putProperty(collection, key, data);
-};
 
 app.post('/place/remove', function(req, res, next) {
   var r = req.body;
@@ -85,50 +77,62 @@ app.post('/place/remove', function(req, res, next) {
     name: r.name,
     apikey: r.apikey
   };
-  getProperty('places', target.name)
+  helper.getProperty('places', target.name)
     .then(function(response) {
-      console.log('response data: ' + JSON.stringify(response.data));
       if (response.data.apiKey == target.apikey){
-        console.log('API KEYS MATCH');
-        removeProperty('places', target.name)
+        helper.removeProperty('places', target.name)
           .then(function(response) {
             res.send(response);
           });
       } else {
-        console.log('API keys dont match');
         res.send('API KEYS FALSE');
       }
     });
 });
 
-function removeProperty(collection, key) {
-  var deferred = Q.defer();
-  db.remove(collection, key, true)
+app.post('/user/create', function(req, res, next) {
+  var r = req.body;
+
+  var aUser = {
+    username: r.username
+  };
+
+  return helper.putProperty('users', aUser.username, aUser)
+           .then(function(response) {
+             res.send('')
+           })
+});
+
+app.post('/stats/set', function(req, res, next) {
+  var r = req.body;
+
+  var counts = {
+    idCounter: r.idCounter,
+    placeCount: r.placeCount,
+    userCount: r.userCount
+  };
+
+  helper.getProperty('stats', 'counts')
     .then(function(response) {
-      console.log('TARGET KILLED');
-      db.get(collection, key)
+      if (counts.idCounter != '')
+        response.data.idCounter = counts.idCounter;
+      if (counts.placeCount != '')
+        response.data.placeCount = counts.placeCount;
+      if (counts.userCount != '')
+        response.data.userCount = counts.userCount;
+
+      helper.putProperty('stats', 'counts', response.data, response.ref)
         .then(function(response) {
-          console.log(response);
-          deferred.resolve({
-            message: 'item not deleted'
-          });
+          if (response == true)
+            res.send('stats set successfully');
+          else
+            res.send('failed to set stats');
         })
-        .fail(function(response) {
-          console.log(response.body);
-          if (response.body.code == 'items_not_found') {
-            deferred.resolve({
-              message: 'item deleted'
-            });
-          }
-          deferred.resolve(response);
-        });
-      //deferred.resolve()
+        .fail('failed to set');
     })
-    .fail(function(response) {
-      deferred.resolve('could not send delete req');
-    });
-  return deferred.promise;
-}
+    .fail('failed to get stats');
+});
+
 
 var server = app.listen(3000, function() {
   console.log('Listening on port %d', server.address().port);

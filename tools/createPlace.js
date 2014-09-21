@@ -58,7 +58,7 @@ prompt.ask([
 
   var client = request.newClient('http://localhost:3000/');
   client.post('place/create', aPlace, function(err, res, body) {
-    console.log(body);
+    console.log(res.body);
     console.log(res.statusCode);
   });
 
