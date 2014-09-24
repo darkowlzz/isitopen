@@ -1,6 +1,7 @@
 var Prompt = require('prompt-improved');
 var request = require('request-json');
 var prompt = new Prompt();
+var client = request.newClient('http://localhost:3000/');
 
 console.log('Tell me the values you want to set');
 prompt.ask([
@@ -30,7 +31,6 @@ prompt.ask([
   console.log('placeCount: ' + counts.placeCount);
   console.log('userCount: ' + counts.userCount);
 
-  var client = request.newClient('http://localhost:3000/');
   client.post('/stats/set', counts, function(err, res, body) {
     console.log(body);
     console.log(res.statusCode);
