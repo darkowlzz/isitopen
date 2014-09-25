@@ -31,7 +31,7 @@ prompt.ask([
   console.log('placeCount: ' + counts.placeCount);
   console.log('userCount: ' + counts.userCount);
 
-  client.post('/stats/set', counts, function(err, res, body) {
+  client.post('stats/set', counts, function(err, res, body) {
     console.log(body);
     console.log(res.statusCode);
   });

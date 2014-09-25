@@ -11,13 +11,37 @@ var express = require('express'),
 var app = express();
 
 
-app.use(morgan('combined'));
+//app.use(morgan('combined'));
 app.use(bodyParser.json());
 
-app.get('/place/:id', function(req, res, next) {
-  return dbTalks.getProperty('places', req.params.id)
+app.get('/place/:name', function(req, res, next) {
+  return Q.try(function() {
+      return dbTalks.getProperty('placeid', req.params.name)
+    })
     .then(function(response) {
-      res.send(response.data);
+      if (response.data != 'NOT FOUND')
+        return dbTalks.getProperty('places', response.data.id);
+      else
+        throw new Error('Place not found');
+    })
+    .then(function(response) {
+      var p = response.data;
+      var data = {
+        place: p.place,
+        location: p.location,
+        coordinates: p.coordinates,
+        status: p.status,
+        tags: p.tags,
+        products: p.products,
+        desc: p.desc,
+        createdBy: p.createdBy,
+        id: p.id,
+        lastUpdated: p.lastUpdated
+      };
+      return res.send(data);
+    })
+    .catch(function(err) {
+      res.send('Error: ' + err);
     });
 });
 
@@ -38,7 +62,7 @@ app.post('/place/create', function(req, res, next) {
     desc: r.description || 'unknown',
     createdBy: r.user || 'unknown',
     id: '',
-    apiKey: r.apikey || 'unknown',
+    apikeys: [r.apikey] || 'unknown',
     lastUpdated: 'unknown'
   };
 
@@ -50,12 +74,11 @@ app.post('/place/create', function(req, res, next) {
     .spread(updateStats)
     .then(function(resp) {
       if (resp == true)
-        return res.send('place created');
+        return res.send('Place created');
       else
-        return res.send('failed to create');
+        return res.send('Failed to create');
     })
     .catch(function(error) {
-      console.log('ERROR: ' + error);
       return res.send(error);
     })
 });
@@ -108,7 +131,6 @@ app.post('/place/remove', function(req, res, next) {
       return res.send('place removed successfully');
     })
     .catch(function(error) {
-      console.log('ERROR: ' + error);
       return res.send(error);
     })
 });
@@ -118,8 +140,11 @@ function getPlaces(target, response) {
 }
 
 function verifyAPIkey(target, resp) {
-  if (resp.data.apiKey == target.apikey) {
+  if (resp.data.apikeys.indexOf(target.apikey) > -1) {
     return [target, dbTalks.removeProperty('places', resp.data.id)];
+  }
+  else {
+    throw new Error('API key not recognized.');
   }
 }
 
@@ -158,7 +183,6 @@ app.post('/user/create', function(req, res, next) {
       return res.send(aUser.apikeys[0]);
     })
     .catch(function(err) {
-      console.log('ERROR: ' + err);
       return res.send('Failed to create user. ' + err);
     })
 });
@@ -201,17 +225,21 @@ app.post('/user/remove', function(req, res, next) {
       return res.send('User removed');
     })
     .catch(function(err) {
-      console.log('ERROR: ' + err);
       return res.send('Failed to delete user. ' + err);
     })
 });
 
 function checkUserAPIkeys(target, resp) {
-  if (resp.data.apikeys.indexOf(target.apikey) > -1) {
-    return dbTalks.removeProperty('users', target.username);
+  if (resp.data.apikeys) {
+    if (resp.data.apikeys.indexOf(target.apikey) > -1) {
+      return dbTalks.removeProperty('users', target.username);
+    }
+    else
+      throw new Error('API key not recognized.');
   }
-  else
-    throw new Error('API key not recognized.');
+  else {
+    throw new Error('User not found.');
+  }
 }
 
 function decreaseUserStats(resp) {
@@ -220,6 +248,17 @@ function decreaseUserStats(resp) {
   return dbTalks.putProperty('stats', 'counts', resp.data, resp.ref);
 }
 
+
+// Get stats data
+app.get('/stats', function(req, res, next) {
+  return dbTalks.getProperty('stats', 'counts')
+    .then(function(resp) {
+      return res.send(resp.data);
+    })
+    .fail(function(resp) {
+      return res.send('CANT FETCH STATS');
+    })
+});
 
 // Set stats data
 app.post('/stats/set', function(req, res, next) {
@@ -242,8 +281,7 @@ app.post('/stats/set', function(req, res, next) {
         return res.send('failed to set stats');
     })
     .catch(function(error) {
-      console.log('ERROR: ' + error);
-      return res.send(error);
+      return res.send('Error: ' + error);
     })
 });
 
