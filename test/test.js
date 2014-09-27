@@ -69,7 +69,7 @@ describe('Create a new place', function() {
     request(app)
       .post('/place/create')
       .send({ name: placeName, location: 'moose', coordinates: '45,12',
-              apikey: apikey })
+              apikey: apikey, username: username })
       .expect(/(?:Place created)/)
       .expect(200)
       .end(done);

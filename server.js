@@ -2,8 +2,6 @@ var express = require('express'),
     morgan = require('morgan'),
     bodyParser = require('body-parser'),
     Q = require('q'),
-    config = require('./config.js'),
-    db = require('orchestrate')(config.db),
     uuid = require('node-uuid'),
     dbTalks = require('./helpers/dbTalks'),
     utils = require('./helpers/utils');
@@ -60,16 +58,28 @@ app.post('/place/create', function(req, res, next) {
     tags: r.tags || 'unknown',
     products: r.products || 'unknown',
     desc: r.description || 'unknown',
-    createdBy: r.user || 'unknown',
+    createdBy: r.username || 'unknown',
     id: '',
     apikeys: [r.apikey] || 'unknown',
     lastUpdated: 'unknown'
   };
 
   return Q.try(function() {
-      return [aPlace, dbTalks.getProperty('stats', 'counts')]
+      console.log('getting users');
+      //return [aPlace, dbTalks.getProperty('stats', 'counts')]
+      return [aPlace, dbTalks.getProperty('users', aPlace.createdBy)];
     })
-    .spread(incrementPlaceCount)
+    .spread(function(target, resp) {
+      if (resp.data.apikeys.indexOf(target.apikey[0]) > -1) {
+        console.log('key recognized');
+        return [target, true];
+      }
+      else
+        throw new Error('API key not recognized.');
+    })
+    .spread(getStats)
+    .spread(addNewPlaceToUser)
+    .spread(addNewPlace)
     .spread(createUniquePlace)
     .spread(updateStats)
     .then(function(resp) {
@@ -83,16 +93,36 @@ app.post('/place/create', function(req, res, next) {
     })
 });
 
-function incrementPlaceCount(aPlace, response) {
+function addNewPlaceToUser(aPlace, response) {
+  console.log('Adding new place to user')
   var idCount = response.data.idCounter || 0;
   var placeCount = response.data.placeCount || 0;
   response.data.idCounter = idCount + 1;
   response.data.placeCount = placeCount + 1;
   aPlace.id = response.data.idCounter;
-  return [aPlace, response, dbTalks.putProperty('places', aPlace.id, aPlace)]
+  return Q.try(function() {
+      return dbTalks.getProperty('users', aPlace.createdBy);
+    })
+    .then(function(resp) {
+      resp.data.places.push(aPlace.place);
+      return dbTalks.putProperty('users', aPlace.createdBy,
+                                 resp.data, resp.ref);
+    })
+    .then(function(resp) {
+      return [aPlace, response];
+    })
+    .catch(function(err) {
+      throw new Error('Failed to update places in user');
+    });
+}
+
+function addNewPlace(aPlace, statsResp) {
+  console.log('adding new place to places');
+  return [aPlace, statsResp, dbTalks.putProperty('places', aPlace.id, aPlace)]
 }
 
 function createUniquePlace(aPlace, countStatus, resp) {
+  console.log('creating unique place');
   if (resp == true) {
     var uniquePlace = {
       place: aPlace.place,
@@ -100,12 +130,14 @@ function createUniquePlace(aPlace, countStatus, resp) {
     };
     return [countStatus,
             dbTalks.putProperty('placeid', aPlace.place, uniquePlace)];
-  } else {
+  }
+  else {
     return res.send('failed to create new place');
   }
 }
 
 function updateStats(countStatus, resp) {
+  console.log('updating stats');
   return dbTalks.putProperty('stats', 'counts',
                              countStatus.data, countStatus.ref);
 }
@@ -125,8 +157,9 @@ app.post('/place/remove', function(req, res, next) {
     .spread(getPlaces) 
     .spread(verifyAPIkey)
     .spread(removePlaceid)
-    .then(getStats)
-    .then(updateStatsRemove)
+    .spread(removePlaceFromUser)
+    .spread(getStats)
+    .spread(updateStatsRemove)
     .then(function(resp) {
       return res.send('place removed successfully');
     })
@@ -141,22 +174,39 @@ function getPlaces(target, response) {
 
 function verifyAPIkey(target, resp) {
   if (resp.data.apikeys.indexOf(target.apikey) > -1) {
-    return [target, dbTalks.removeProperty('places', resp.data.id)];
+    return [target, resp.data.createdBy,
+            dbTalks.removeProperty('places', resp.data.id)];
   }
   else {
     throw new Error('API key not recognized.');
   }
 }
 
-function removePlaceid(target, resp) {
-  return dbTalks.removeProperty('placeid', target.name);
+function removePlaceid(target, createdBy, resp) {
+  return [target, createdBy, dbTalks.removeProperty('placeid', target.name)];
 }
 
-function getStats(resp) {
-  return dbTalks.getProperty('stats', 'counts');
+function removePlaceFromUser(target, createdBy, response) {
+  return Q.try(function() {
+      return dbTalks.getProperty('users', createdBy);
+    })
+    .then(function(resp) {
+      var index = resp.data.places.indexOf(target.name);
+      resp.data.places.splice(index, 1);
+      return [target, dbTalks.putProperty('users', createdBy,
+                                          resp.data, resp.ref)];
+    })
+    .catch(function(err) {
+      throw new Error(err);
+    })
 }
 
-function updateStatsRemove(resp) {
+function getStats(target, prevResp, resp) {
+  console.log('getting stats');
+  return [target, dbTalks.getProperty('stats', 'counts')];
+}
+
+function updateStatsRemove(target, resp) {
   var placeCount = resp.data.placeCount;
   resp.data.placeCount = placeCount - 1;
   return dbTalks.putProperty('stats', 'counts', resp.data, resp.ref);
@@ -170,7 +220,8 @@ app.post('/user/create', function(req, res, next) {
 
   var aUser = {
     username: r.username,
-    apikeys: [uid]
+    apikeys: [uid],
+    places: []
   };
 
   return Q.try(function() {
@@ -192,7 +243,7 @@ function checkUserAvailability(aUser, resp) {
     return dbTalks.putProperty('users', aUser.username, aUser);
   } 
   else {
-    throw new Error('Username alredy used');
+    throw new Error('Username already used');
   }
 }
 
@@ -219,6 +270,7 @@ app.post('/user/remove', function(req, res, next) {
       return [target, dbTalks.getProperty('users', target.username)]
     })
     .spread(checkUserAPIkeys)
+    .spread(removeUser)
     .then(getUserStats)
     .then(decreaseUserStats)
     .then(function(resp) {
@@ -230,22 +282,80 @@ app.post('/user/remove', function(req, res, next) {
 });
 
 function checkUserAPIkeys(target, resp) {
-  if (resp.data.apikeys) {
-    if (resp.data.apikeys.indexOf(target.apikey) > -1) {
-      return dbTalks.removeProperty('users', target.username);
-    }
-    else
-      throw new Error('API key not recognized.');
+  if (resp.data.apikeys.indexOf(target.apikey) > -1) {
+    console.log('key recognized');
+    return [target, resp, true];
   }
-  else {
-    throw new Error('User not found.');
-  }
+  else
+    throw new Error('API key not recognized.');
+}
+
+function removeUser(target, prevResp, resp) {
+  if (resp === true)
+    return dbTalks.removeProperty('users', target.username);
+  else
+     throw new Error('API keys unknown');
 }
 
 function decreaseUserStats(resp) {
   var userCount = resp.data.userCount;
   resp.data.userCount = userCount - 1;
   return dbTalks.putProperty('stats', 'counts', resp.data, resp.ref);
+}
+
+
+// Generate new API key
+app.post('/user/gen-apikey', function(req, res, next) {
+  var r = req.body;
+  var target = {
+    username: r.username,
+    apikey: r.apikey
+  };
+
+  return Q.try(function() {
+      return [target, dbTalks.getProperty('users', target.username)]
+    })
+    .spread(checkUserAPIkeys)
+    .spread(addNewAPIkey)
+    .spread(updatePlaces)
+    .then(function(apikey) {
+      return res.send(apikey);
+    })
+    .catch(function(err) {
+      res.send('Error: ' + err);
+    });
+});
+
+function addNewAPIkey(target, prevResp, resp) {
+  if (resp === true) {
+    var newKey = uuid();
+    prevResp.data.apikeys.push(newKey);
+    return [newKey, prevResp, dbTalks.putProperty('users', target.username,
+                                        prevResp.data, prevResp.ref)];
+  }
+  else
+    throw new Error('API not recognized');
+}
+
+function updatePlaces(apikey, user, resp) {
+  for (var i = 0; i < user.data.places.length; i++) {
+    console.log('adding to ' + user.data.places[i]);
+    Q.try(function() {
+      return dbTalks.getProperty('placeid', user.data.places[i]);
+    })
+    .then(function(response) {
+      return dbTalks.getProperty('places', response.data.id);
+    })
+    .then(function(response) {
+      response.data.apikeys.push(apikey);
+      return dbTalks.putProperty('places', response.data.id,
+                                 response.data, response.ref);
+    })
+    .catch(function(err) {
+      console.log('Error:', err);
+    });
+  }
+  return apikey;
 }
 
 

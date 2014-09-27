@@ -24,10 +24,19 @@ function getProperty(collection, key) {
 exports.getProperty = getProperty;
 
 
-function putProperty(collection, key, data) {
+function putProperty(collection, key, data, update) {
+  var update = update || false;
   var deferred = Q.defer();
+  db.put(collection, key, data, update)
+    .then(function(response) {
+      deferred.resolve(true);
+    })
+    .fail(function(response) {
+      deferred.resolve(false);
+    });
+  /*
   Q.try(function() {
-    return db.put(collection, key, data);
+    return db.put(collection, key, data, update);
   })
   .then(function(response) {
     deferred.resolve(true);
@@ -35,6 +44,7 @@ function putProperty(collection, key, data) {
   .catch(function(err) {
     deferred.resolve(false);
   });
+  */
   return deferred.promise;
 }
 exports.putProperty = putProperty;

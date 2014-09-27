@@ -24,6 +24,11 @@ prompt.ask([
     question: 'apikey',
     key: 'apikey',
     required: true
+  },
+  {
+    question: 'username',
+    key: 'username',
+    required: true
   }
 ], function(err, res) {
   if (err) return console.error(err);
@@ -37,7 +42,8 @@ prompt.ask([
     name: res.name,
     location: res.location,
     coordinates: res.coordinates,
-    apikey: res.apikey
+    apikey: res.apikey,
+    username: res.username
   };
 
   console.log('Sending a req to the db...');
