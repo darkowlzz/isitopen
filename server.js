@@ -4,7 +4,8 @@ var express = require('express'),
     Q = require('q'),
     uuid = require('node-uuid'),
     dbTalks = require('./helpers/dbTalks'),
-    utils = require('./helpers/utils');
+    utils = require('./helpers/utils'),
+    operations = require('./helpers/operations');
 
 var app = express();
 
@@ -218,12 +219,14 @@ app.post('/user/create', function(req, res, next) {
   var r = req.body;
   var uid = uuid();
 
-  var aUser = {
-    username: r.username,
-    apikeys: [uid],
-    places: []
-  };
+  return Q.try(function() {
+      return operations.createNewUser(r.username);
+    })
+    .catch(function(err) {
+      return err;
+    });
 
+  /*
   return Q.try(function() {
       return [aUser, dbTalks.getProperty('users', aUser.username)]
     })
@@ -236,8 +239,10 @@ app.post('/user/create', function(req, res, next) {
     .catch(function(err) {
       return res.send('Failed to create user. ' + err);
     })
+    */
 });
 
+/*
 function checkUserAvailability(aUser, resp) {
   if (resp.data == 'NOT FOUND') {
     return dbTalks.putProperty('users', aUser.username, aUser);
@@ -256,16 +261,25 @@ function updateUserStats(response) {
   response.data.userCount = userCount + 1;
   return dbTalks.putProperty('stats', 'counts', response.data, response.ref);
 }
-
+*/
 
 // Delete a user
 app.post('/user/remove', function(req, res, next) {
   var r = req.body;
+  /*
   var target = {
     username: r.username,
     apikey: r.apikey
   };
+  */
 
+  return Q.try(function() {
+      return operations.deleteUser(r.username, r.apikey);
+    })
+    .catch(function(err) {
+      return err;
+    });
+  /*
   return Q.try(function() {
       return [target, dbTalks.getProperty('users', target.username)]
     })
@@ -279,8 +293,10 @@ app.post('/user/remove', function(req, res, next) {
     .catch(function(err) {
       return res.send('Failed to delete user. ' + err);
     })
+    */
 });
 
+/*
 function checkUserAPIkeys(target, resp) {
   if (resp.data.apikeys.indexOf(target.apikey) > -1) {
     console.log('key recognized');
@@ -302,16 +318,26 @@ function decreaseUserStats(resp) {
   resp.data.userCount = userCount - 1;
   return dbTalks.putProperty('stats', 'counts', resp.data, resp.ref);
 }
-
+*/
 
 // Generate new API key
 app.post('/user/gen-apikey', function(req, res, next) {
   var r = req.body;
+  /*
   var target = {
     username: r.username,
     apikey: r.apikey
   };
+  */
 
+  return Q.try(function() {
+      return operations.generateNewAPI(r.username, r.apikey);
+    })
+    .catch(function(err) {
+      return err;
+    });
+
+  /*
   return Q.try(function() {
       return [target, dbTalks.getProperty('users', target.username)]
     })
@@ -324,8 +350,10 @@ app.post('/user/gen-apikey', function(req, res, next) {
     .catch(function(err) {
       res.send('Error: ' + err);
     });
+    */
 });
 
+/*
 function addNewAPIkey(target, prevResp, resp) {
   if (resp === true) {
     var newKey = uuid();
@@ -357,7 +385,7 @@ function updatePlaces(apikey, user, resp) {
   }
   return apikey;
 }
-
+*/
 
 // Get stats data
 app.get('/stats', function(req, res, next) {
