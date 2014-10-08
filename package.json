@@ -6,7 +6,7 @@
   "scripts": {
     "test": "mocha"
   },
-  "author": "sunny <indiasuny000@gmail.com>",
+  "author": "Sunny (darkowlzz) <indiasuny000@gmail.com>",
   "license": "ISC",
   "dependencies": {
     "body-parser": "^1.8.3",
