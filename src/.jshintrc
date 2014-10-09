@@ -1,0 +1,10 @@
+{
+  "node": true,
+  "indent": 2,
+  "maxlen": 80,
+  "unused": true,
+  "undef": true,
+  "nonbsp": true,
+  "multistr": true,
+  "esnext": true
+}

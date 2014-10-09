@@ -4,4 +4,4 @@ exports.getNumberArray = function(strArray) {
   for (var i = 0; i < numArray.length; i++)
     numArray[i] = parseFloat(numArray[i]);
   return numArray;
-}
+};
