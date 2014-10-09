@@ -5,7 +5,7 @@ var express = require('express'),
     uuid = require('node-uuid'),
     dbTalks = require('./helpers/dbTalks'),
     utils = require('./helpers/utils'),
-    operations = require('./helpers/operations');
+    operations = require('./helpers/userOperations');
 
 var app = express();
 

@@ -1,0 +1,5 @@
+node_modules/**
+src/server.js
+src/incompleteTest.js
+src/tools/*
+src/helpers/placeOperations.js

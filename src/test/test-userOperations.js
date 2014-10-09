@@ -1,4 +1,7 @@
-var operations = require('../helpers/operations');
+/* jshint expr:true */
+/* global describe, it */
+
+var userOperations = require('../helpers/userOperations');
 var dbTalks = require('../helpers/dbTalks');
 var Q = require('q');
 var uuid = require('node-uuid');
@@ -38,7 +41,7 @@ describe('Preparing for test...', function() {
     })
     .catch(function(err) {
       return done(err);
-    })
+    });
   });
 
   it('creating a default user', function(done) {
@@ -52,7 +55,7 @@ describe('Preparing for test...', function() {
     })
     .catch(function(err) {
       return done(err);
-    })
+    });
   });
 });
 
@@ -60,7 +63,7 @@ describe('Statiscits', function() {
   it('should initialize stats', function(done) {
     this.timeout(DURATION);
     Q.try(function() {
-      return operations.initializeStats();
+      return userOperations.initializeStats();
     })
     .then(function(resp) {
       resp.success.should.be.true;
@@ -68,7 +71,7 @@ describe('Statiscits', function() {
     })
     .catch(function(err) {
       return done(err);
-    })
+    });
   });
 
   it('values should be 0', function(done) {
@@ -84,7 +87,7 @@ describe('Statiscits', function() {
     })
     .catch(function(err) {
       return done(err);
-    })
+    });
   });
 });
 
@@ -92,7 +95,7 @@ describe('username availability check', function() {
   it('username should not be available', function(done) {
     this.timeout(DURATION);
     Q.try(function() {
-      return operations.usernameAvailability(username1);
+      return userOperations.usernameAvailability(username1);
     })
     .spread(function(extras, resp) {
       resp.should.be.false;
@@ -100,13 +103,13 @@ describe('username availability check', function() {
     })
     .catch(function(err) {
       return done(err);
-    })
+    });
   });
 
   it('username should be available', function(done) {
     this.timeout(DURATION);
     Q.try(function() {
-      return operations.usernameAvailability(username2);
+      return userOperations.usernameAvailability(username2);
     })
     .spread(function(extras, resp) {
       resp.should.be.true;
@@ -114,7 +117,7 @@ describe('username availability check', function() {
     })
     .catch(function(err) {
       return done(err);
-    })
+    });
   });
 });
 
@@ -126,11 +129,11 @@ describe('register user', function() {
     this.timeout(DURATION);
     Q.try(function() {
       // checking username availability before creating new user
-      return operations.usernameAvailability(username3);
+      return userOperations.usernameAvailability(username3);
     })
     .spread(function(extras, resp) {
       if (resp === true) {
-        return operations.createNewUser(username3);
+        return userOperations.createNewUser(username3);
       }
       else {
         return resp;
@@ -143,13 +146,13 @@ describe('register user', function() {
     })
     .catch(function(err) {
       return done(err);
-    })
+    });
   });
 
   it('user should not be created', function(done) {
     this.timeout(DURATION);
     Q.try(function() {
-      return operations.usernameAvailability(username1);
+      return userOperations.usernameAvailability(username1);
     })
     .spread(function(extras, resp) {
       resp.should.be.false;
@@ -157,7 +160,7 @@ describe('register user', function() {
     })
     .catch(function(err) {
       return done(err);
-    })
+    });
   });
 });
 
@@ -165,7 +168,7 @@ describe('delete user', function() {
   it('user should be deleted', function(done) {
     this.timeout(DURATION);
     Q.try(function() {
-      return operations.deleteUser(username3, newKey2);
+      return userOperations.deleteUser(username3, newKey2);
     })
     .then(function(resp) {
       resp.success.should.be.true;
@@ -173,13 +176,13 @@ describe('delete user', function() {
     })
     .catch(function(err) {
       return done(err);
-    })
+    });
   });
 
   it('user should not be found', function(done) {
     this.timeout(DURATION);
     Q.try(function() {
-      return operations.usernameAvailability(username3);
+      return userOperations.usernameAvailability(username3);
     })
     .spread(function(extras, resp) {
       resp.should.be.true;
@@ -187,7 +190,7 @@ describe('delete user', function() {
     })
     .catch(function(err) {
       return done(err);
-    })
+    });
   });
 });
 
@@ -195,7 +198,7 @@ describe('verify user public api key', function() {
   it('key verification should pass', function(done) {
     this.timeout(DURATION);
     Q.try(function() {
-      return operations.verifyUserKey(username1, key2);
+      return userOperations.verifyUserKey(username1, key2);
     })
     .then(function(resp) {
       resp.success.should.be.true;
@@ -203,13 +206,13 @@ describe('verify user public api key', function() {
     })
     .catch(function(err) {
       return done(err);
-    })
+    });
   });
 
   it('key verification should fail', function(done) {
     this.timeout(DURATION);
     Q.try(function() {
-      return operations.verifyUserKey(username1, 'xxxx');
+      return userOperations.verifyUserKey(username1, 'xxxx');
     })
     .then(function(resp) {
       resp.success.should.be.false;
@@ -217,7 +220,7 @@ describe('verify user public api key', function() {
     })
     .catch(function(err) {
       return done(err);
-    })
+    });
   });
 });
 
@@ -225,7 +228,7 @@ describe('generate new API key', function() {
   it('new API key should be added', function(done) {
     this.timeout(DURATION);
     Q.try(function() {
-      return operations.generateNewAPI(username1, key2);
+      return userOperations.generateNewAPI(username1, key2);
     })
     .then(function(resp) {
       resp.success.should.be.true;
@@ -235,13 +238,13 @@ describe('generate new API key', function() {
     })
     .catch(function(err) {
       return done(err);
-    })
+    });
   });
 
   it('new API key should not be added due to wrong key', function(done) {
     this.timeout(DURATION);
     Q.try(function() {
-      return operations.generateNewAPI(username1, 'xxxx');
+      return userOperations.generateNewAPI(username1, 'xxxx');
     })
     .then(function(resp) {
       resp.success.should.be.false;
@@ -249,13 +252,13 @@ describe('generate new API key', function() {
     })
     .catch(function(err) {
       return done(err);
-    })
+    });
   });
 
   it('new API key should not be added due to unknown user', function(done) {
     this.timeout(DURATION);
     Q.try(function() {
-      return operations.generateNewAPI(username2, 'xxxx');
+      return userOperations.generateNewAPI(username2, 'xxxx');
     })
     .then(function(resp) {
       resp.should.have.property('error');
@@ -263,7 +266,7 @@ describe('generate new API key', function() {
     })
     .catch(function(err) {
       return done(err);
-    })
+    });
   });
 });
 
@@ -274,7 +277,7 @@ describe('Rename user', function() {
   it('rename should be successful', function(done) {
     this.timeout(DURATION);
     Q.try(function() {
-      return operations.renameUser(username1, username4, newKey);
+      return userOperations.renameUser(username1, username4, newKey);
     })
     .then(function(resp) {
       resp.success.should.be.true;
@@ -282,13 +285,13 @@ describe('Rename user', function() {
     })
     .catch(function(err) {
       return done(err);
-    })
+    });
   });
 
   it('username should not be found', function(done) {
     this.timeout(DURATION);
     Q.try(function() {
-      return operations.usernameAvailability(username1);
+      return userOperations.usernameAvailability(username1);
     })
     .spread(function(extras, resp) {
       resp.should.be.true;
@@ -296,13 +299,13 @@ describe('Rename user', function() {
     })
     .catch(function(err) {
       return done(err);
-    })
+    });
   });
 
   it('username should be found', function(done) {
     this.timeout(DURATION);
     Q.try(function() {
-      return operations.usernameAvailability(username4);
+      return userOperations.usernameAvailability(username4);
     })
     .spread(function(extras, resp) {
       resp.should.be.false;
@@ -310,7 +313,7 @@ describe('Rename user', function() {
     })
     .catch(function(err) {
       return done(err);
-    })
+    });
   });
 });
 
@@ -318,7 +321,7 @@ describe('revoke an API key', function() {
   it('should revoke a previously generated API key', function(done) {
     this.timeout(DURATION);
     Q.try(function() {
-      return operations.revokeKey(username4, newKey);
+      return userOperations.revokeKey(username4, newKey);
     })
     .then(function(resp) {
       resp.success.should.be.true;
@@ -327,13 +330,13 @@ describe('revoke an API key', function() {
     })
     .catch(function(err) {
       return done(err);
-    })
+    });
   });
 
   it('should fail to revoke due to unknown key', function(done) {
     this.timeout(DURATION);
     Q.try(function() {
-      return operations.revokeKey(username4, 'xxxx');
+      return userOperations.revokeKey(username4, 'xxxx');
     })
     .then(function(resp) {
       resp.success.should.be.false;
@@ -341,13 +344,13 @@ describe('revoke an API key', function() {
     })
     .catch(function(err) {
       return done(err);
-    })
+    });
   });
 
   it('should fail to revoke due to unknown user', function(done) {
     this.timeout(DURATION);
     Q.try(function() {
-      return operations.revokeKey(username2, 'xxxx');
+      return userOperations.revokeKey(username2, 'xxxx');
     })
     .then(function(resp) {
       resp.should.have.property('error');
@@ -355,7 +358,7 @@ describe('revoke an API key', function() {
     })
     .catch(function(err) {
       return done(err);
-    })
+    });
   });
 });
 
@@ -371,7 +374,7 @@ describe('Tests completed. Cleaning up...', function() {
     })
     .catch(function(err) {
       return done(err);
-    })
+    });
   });
 
   it('deleting created user', function(done) {
@@ -385,7 +388,7 @@ describe('Tests completed. Cleaning up...', function() {
     })
     .catch(function(err) {
       return done(err);
-    })
+    });
   });
 
   it('restoring stats', function(done) {
@@ -396,7 +399,7 @@ describe('Tests completed. Cleaning up...', function() {
         placeCount: placeCount,
         userCount: userCount
       };
-      return operations.setStats(statsVal);
+      return userOperations.setStats(statsVal);
     })
     .then(function(resp) {
       resp.success.should.be.true;
@@ -404,6 +407,6 @@ describe('Tests completed. Cleaning up...', function() {
     })
     .catch(function(err) {
       return done(err);
-    })
+    });
   });
 });

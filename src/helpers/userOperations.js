@@ -1,11 +1,10 @@
 /**
- * A module to help perform basic operations.
- * @module operations
+ * A module to help perform basic user related operations.
+ * @module userOperations
  */
 
 var Q = require('q'),
     uuid = require('node-uuid'),
-    utils = require('./utils'),
     dbTalks = require('./dbTalks');
 
 
@@ -32,7 +31,7 @@ function usernameAvailability(username) {
     })
     .catch(function(err) {
       return [err, false];
-    })
+    });
 }
 exports.usernameAvailability = usernameAvailability;
 

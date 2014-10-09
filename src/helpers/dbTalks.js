@@ -16,22 +16,23 @@ function getProperty(collection, key) {
     })
     .fail(function(response) {
       deferred.resolve({
-        data: "NOT FOUND"
+        data: "NOT FOUND",
+        response: response
       });
     });
   return deferred.promise;
-};
+}
 exports.getProperty = getProperty;
 
 
 function putProperty(collection, key, data, update) {
-  var update = update || false;
+  update = update || false;
   var deferred = Q.defer();
   db.put(collection, key, data, update)
-    .then(function(response) {
+    .then(function(response) { // jshint ignore:line
       deferred.resolve(true);
     })
-    .fail(function(response) {
+    .fail(function(response) { // jshint ignore:line
       deferred.resolve(false);
     });
   /*
@@ -54,13 +55,13 @@ function removeProperty(collection, key) {
   Q.try(function() {
     return db.remove(collection, key, true);
   })
-  .then(function(response) {
+  .then(function(response) { // jshint ignore:line
     return db.get(collection, key);
   })
-  .then(function(response) {
+  .then(function(response) { // jshint ignore:line
     deferred.resolve('ITEM NOT DELETED');
   })
-  .catch(function(err) {
+  .catch(function(err) { // jshint ignore:line
     deferred.resolve(true);
   });
 
