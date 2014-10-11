@@ -149,6 +149,20 @@ describe('register user', function() {
     });
   });
 
+  it('user count should have increased', function(done) {
+    this.timeout(DURATION);
+    Q.try(function() {
+      return dbTalks.getProperty('stats', 'counts');
+    })
+    .then(function(resp) {
+      resp.data.userCount.should.be.exactly(1);
+      done();
+    })
+    .catch(function(err) {
+      return done(err);
+    });
+  });
+
   it('user should not be created', function(done) {
     this.timeout(DURATION);
     Q.try(function() {
