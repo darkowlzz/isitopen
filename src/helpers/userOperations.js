@@ -59,6 +59,14 @@ function createNewUser(username) {
     })
     .then(function(resp) {
       if (resp === true) {
+        return incrementUserCount();
+      }
+      else {
+        return false;
+      }
+    })
+    .then(function(resp) {
+      if (resp === true) {
         return {
           success: true,
           key: key2
@@ -368,3 +376,32 @@ function setStats(statsVal) {
     });
 }
 exports.setStats = setStats;
+
+
+/**
+ * Increment User count in stats.
+ * @return {boolean} - Result of the operation.
+ */
+function incrementUserCount() {
+  return Q.try(function() {
+      return dbTalks.getProperty('stats', 'counts');
+    })
+    .then(function(resp) {
+      if (resp != 'NOT FOUND') {
+        resp.data.userCount++;
+        return dbTalks.putProperty('stats', 'counts', resp.data, resp.ref);
+      }
+      else {
+        return false;
+      }
+    })
+    .then(function(resp) {
+      return resp;
+    })
+    .catch(function(err) {
+      return {
+        error: err
+      };
+    });
+}
+exports.incrementUserCount = incrementUserCount;
