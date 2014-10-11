@@ -73,11 +73,16 @@ function createNewUser(username) {
         };
       }
       else {
-        return ['Failed to create user', false];
+        return {
+          error: 'Failed to create user',
+          success: false
+        };
       }
     })
     .catch(function(err) {
-      return [err, false];
+      return {
+        error: err
+      };
     });
 }
 exports.createNewUser = createNewUser;
@@ -277,6 +282,14 @@ function deleteUser(username, key) {
       }
     })
     .then(function(resp) {
+      if (resp === true) {
+        return decrementUserCount();
+      }
+      else {
+        return resp;
+      }
+    })
+    .then(function(resp) {
       return {
         success: resp
       };
@@ -405,3 +418,32 @@ function incrementUserCount() {
     });
 }
 exports.incrementUserCount = incrementUserCount;
+
+
+/**
+ * Decrement User count in stats.
+ * @return {boolean} - Result of the operation.
+ */
+function decrementUserCount() {
+  return Q.try(function() {
+      return dbTalks.getProperty('stats', 'counts');
+    })
+    .then(function(resp) {
+      if (resp != 'NOT FOUND') {
+        resp.data.userCount--;
+        return dbTalks.putProperty('stats', 'counts', resp.data, resp.ref);
+      }
+      else {
+        return false;
+      }
+    })
+    .then(function(resp) {
+      return resp;
+    })
+    .catch(function(err) {
+      return {
+        error: err
+      };
+    });
+}
+exports.decrementUserCount = decrementUserCount;

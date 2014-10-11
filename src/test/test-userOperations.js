@@ -21,7 +21,7 @@ var idCounter, placeCount, userCount;
 
 const DURATION = 25000;
 
-describe('Preparing for test...', function() {
+describe('Preparing for userOperations test...', function() {
   it('backing up stats', function(done) {
     this.timeout(DURATION);
     Q.try(function() {
@@ -186,6 +186,20 @@ describe('delete user', function() {
     })
     .then(function(resp) {
       resp.success.should.be.true;
+      done();
+    })
+    .catch(function(err) {
+      return done(err);
+    });
+  });
+
+  it('user count should have decreased', function(done) {
+    this.timeout(DURATION);
+    Q.try(function() {
+      return dbTalks.getProperty('stats', 'counts');
+    })
+    .then(function(resp) {
+      resp.data.userCount.should.be.exactly(0);
       done();
     })
     .catch(function(err) {
