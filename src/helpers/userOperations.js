@@ -274,8 +274,11 @@ function deleteUser(username, key) {
       return verifyUserKey(username, key);
     })
     .then(function(resp) {
-      if (resp.success) {
+      if (resp.success === true) {
         return dbTalks.removeProperty('users', username);
+      }
+      else if (resp.error) {
+        return false;
       }
       else {
         return resp.success;

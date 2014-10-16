@@ -1,21 +1,20 @@
 var express = require('express'),
-    morgan = require('morgan'),
+    //morgan = require('morgan'),
     bodyParser = require('body-parser'),
     Q = require('q'),
-    uuid = require('node-uuid'),
-    dbTalks = require('./helpers/dbTalks'),
-    utils = require('./helpers/utils'),
-    operations = require('./helpers/userOperations');
+    userOperations = require('./helpers/userOperations');
 
 var app = express();
 
 
 //app.use(morgan('combined'));
 app.use(bodyParser.json());
+app.set('json spaces', 2);
 
-app.get('/place/:name', function(req, res, next) {
+/*
+app.get('/place/:id', function(req, res, next) {
   return Q.try(function() {
-      return dbTalks.getProperty('placeid', req.params.name)
+      return dbTalks.getProperty('placeid', req.params.id)
     })
     .then(function(response) {
       if (response.data != 'NOT FOUND')
@@ -212,34 +211,32 @@ function updateStatsRemove(target, resp) {
   resp.data.placeCount = placeCount - 1;
   return dbTalks.putProperty('stats', 'counts', resp.data, resp.ref);
 }
+*/
 
 
 // Create a new user
-app.post('/user/create', function(req, res, next) {
+app.post('/user/create', function(req, res) {
   var r = req.body;
-  var uid = uuid();
 
   return Q.try(function() {
-      return operations.createNewUser(r.username);
+      return userOperations.usernameAvailability(r.username);
     })
-    .catch(function(err) {
-      return err;
-    });
-
-  /*
-  return Q.try(function() {
-      return [aUser, dbTalks.getProperty('users', aUser.username)]
+    .spread(function(extras, resp) {
+      if (resp === true) {
+        return userOperations.createNewUser(r.username);
+      }
+      else {
+        return {
+          error: 'Username not available'
+        };
+      }
     })
-    .spread(checkUserAvailability)
-    .then(getUserStats)
-    .then(updateUserStats)
     .then(function(resp) {
-      return res.send(aUser.apikeys[0]);
+      return res.json(resp);
     })
     .catch(function(err) {
-      return res.send('Failed to create user. ' + err);
-    })
-    */
+      return res.json(err);
+    });
 });
 
 /*
@@ -264,36 +261,18 @@ function updateUserStats(response) {
 */
 
 // Delete a user
-app.post('/user/remove', function(req, res, next) {
+app.post('/user/remove', function(req, res) {
   var r = req.body;
-  /*
-  var target = {
-    username: r.username,
-    apikey: r.apikey
-  };
-  */
 
   return Q.try(function() {
-      return operations.deleteUser(r.username, r.apikey);
+      return userOperations.deleteUser(r.username, r.apikey);
     })
-    .catch(function(err) {
-      return err;
-    });
-  /*
-  return Q.try(function() {
-      return [target, dbTalks.getProperty('users', target.username)]
-    })
-    .spread(checkUserAPIkeys)
-    .spread(removeUser)
-    .then(getUserStats)
-    .then(decreaseUserStats)
     .then(function(resp) {
-      return res.send('User removed');
+      return res.json(resp);
     })
     .catch(function(err) {
-      return res.send('Failed to delete user. ' + err);
-    })
-    */
+      return res.json(err);
+    });
 });
 
 /*
@@ -318,17 +297,10 @@ function decreaseUserStats(resp) {
   resp.data.userCount = userCount - 1;
   return dbTalks.putProperty('stats', 'counts', resp.data, resp.ref);
 }
-*/
 
 // Generate new API key
 app.post('/user/gen-apikey', function(req, res, next) {
   var r = req.body;
-  /*
-  var target = {
-    username: r.username,
-    apikey: r.apikey
-  };
-  */
 
   return Q.try(function() {
       return operations.generateNewAPI(r.username, r.apikey);
@@ -337,7 +309,6 @@ app.post('/user/gen-apikey', function(req, res, next) {
       return err;
     });
 
-  /*
   return Q.try(function() {
       return [target, dbTalks.getProperty('users', target.username)]
     })
@@ -350,10 +321,8 @@ app.post('/user/gen-apikey', function(req, res, next) {
     .catch(function(err) {
       res.send('Error: ' + err);
     });
-    */
 });
 
-/*
 function addNewAPIkey(target, prevResp, resp) {
   if (resp === true) {
     var newKey = uuid();
@@ -385,7 +354,6 @@ function updatePlaces(apikey, user, resp) {
   }
   return apikey;
 }
-*/
 
 // Get stats data
 app.get('/stats', function(req, res, next) {
@@ -434,6 +402,7 @@ function checkUpdateStats(counts, response) {
   return dbTalks.putProperty('stats', 'counts',
                              response.data, response.ref);
 }
+*/
 
 
 // Start the server
