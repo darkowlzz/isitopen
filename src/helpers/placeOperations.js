@@ -44,7 +44,7 @@ exports.getNewPlaceId = getNewPlaceId;
  * {
  *   creator: <String>
  *   token: <String>,
- *   placeName: <String>,
+ *   name: <String>,
  *   location: <String>,
  *   coordinates: <String>,
  *   tags: <String>,
@@ -113,12 +113,76 @@ exports.deregisterPlace = deregisterPlace;
 
 
 /**
+ * Add a given place to user's `places` field.
+ * @param {Object} - A place object with required properties `creator`, `id` &
+ * `name`.
+ * @return {Object} - Consisting of boolean result of the operation.
+ */
+function addPlaceToUser(place) {
+  return Q.try(function() {
+      return dbTalks.getProperty('users', place.creator);
+    })
+    .then(function(resp) {
+      var mPlace = {
+        id: place.id,
+        name: place.name
+      };
+      resp.data.places.push(mPlace);
+      return dbTalks.putProperty('users', place.creator, resp.data, resp.ref);
+    })
+    .then(function(resp) {
+      return {
+        success: resp
+      };
+    })
+    .catch(function(err) {
+      return {
+        error: err
+      };
+    });
+}
+exports.addPlaceToUser = addPlaceToUser;
+
+
+/**
+ * Remove a given place from user's `places` field.
+ * @param {Object} - A place object with required properties `creator` & `id`.
+ * @return {Object} - Consisting of boolean result of the operation.
+ */
+function removePlaceFromUser(place) {
+  return Q.try(function() {
+      return dbTalks.getProperty('users', place.creator);
+    })
+    .then(function(resp) {
+      for (var i = 0; i < resp.data.places.length; i++) {
+        if (resp.data.places[i].id == place.id) {
+          break;
+        }
+      }
+      resp.data.places.splice(i, 1);
+      return dbTalks.putProperty('users', place.creator, resp.data, resp.ref);
+    })
+    .then(function(resp) {
+      return {
+        success: resp
+      };
+    })
+    .catch(function(err) {
+      return {
+        error: err
+      };
+    });
+}
+exports.removePlaceFromUser = removePlaceFromUser;
+
+
+/**
  * Create a new place.
  * @param {Object} - A place object.
  * {
  *   creator: <String>
  *   token: <String>,
- *   placeName: <String>,
+ *   name: <String>,
  *   location: <String>,
  *   coordinates: <String>,
  *   tags: <String>,
@@ -144,13 +208,21 @@ function createPlace(place) {
     })
     .then(function(resp) {
       if (resp.success === true) {
-        return [place.id, incrementPlaceCount()];
+        return incrementPlaceCount();
       }
       else {
-        return [place.id, {success: false}];
+        return { success: false };
       }
     })
-    .spread(function(placeId, resp) {
+    .then(function(resp) {
+      if (resp.success === true) {
+        return addPlaceToUser(place);
+      }
+      else {
+        return { success: false };
+      }
+    })
+    .then(function(resp) {
       if (resp.error) {
         return {
           error: resp.error
@@ -159,7 +231,7 @@ function createPlace(place) {
       else {
         return {
           success: resp.success,
-          placeId: placeId
+          placeId: place.id
         };
       }
     })
@@ -184,6 +256,16 @@ function deletePlace(place) {
     .then(function(resp) {
       if (resp.success === true) {
         return decrementPlaceCount();
+      }
+      else {
+        return {
+          success: false
+        };
+      }
+    })
+    .then(function(resp) {
+      if (resp.success === true) {
+        return removePlaceFromUser(place);
       }
       else {
         return {
