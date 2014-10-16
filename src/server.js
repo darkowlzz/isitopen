@@ -2,8 +2,9 @@ var express = require('express'),
     //morgan = require('morgan'),
     bodyParser = require('body-parser'),
     Q = require('q'),
-    //utils = require('./helpers/utils'),
-    userOperations = require('./helpers/userOperations');
+    utils = require('./helpers/utils'),
+    userOperations = require('./helpers/userOperations'),
+    placeOperations = require('./helpers/placeOperations');
 
 var app = express();
 
@@ -43,16 +44,17 @@ app.get('/place/:id', function(req, res, next) {
       res.send('Error: ' + err);
     });
 });
+*/
 
 // Create a new place
-app.post('/place/create', function(req, res, next) {
+app.post('/place/create', function(req, res) {
   var r = req.body;
   var coord;
   if (r.coordinates) {
     coord = utils.getNumberArray(r.coordinates);
   }
   var aPlace = {
-    place: r.name,
+    name: r.name,
     location: r.location || 'unknown',
     coordinates: coord || 'unknown',
     status: false,
@@ -60,75 +62,29 @@ app.post('/place/create', function(req, res, next) {
     products: r.products || 'unknown',
     desc: r.description || 'unknown',
     creator: r.username || 'unknown',
-    apikeys: [r.apikey] || 'unknown',
     lastUpdated: 'unknown'
   };
 
   return Q.try(function() {
-      return userOperations.verifyUserKey(aPlace.creator);
+      return userOperations.verifyUserKey(aPlace.creator, r.apikey);
     })
     .then(function(resp) {
       if (resp.success === true) {
-        return userOperations.createPlace(aPlace);
+        return placeOperations.createPlace(aPlace);
       }
       else {
-        return {
-          success: false
-        };
+        return { success: false };
       }
     })
-    .spread(function(target, resp) {
-      if (resp.data.apikeys.indexOf(target.apikey[0]) > -1) {
-        console.log('key recognized');
-        return [target, true];
-      }
-      else
-        throw new Error('API key not recognized.');
-    })
-    .spread(getStats)
-    .spread(addNewPlaceToUser)
-    .spread(addNewPlace)
-    .spread(createUniquePlace)
-    .spread(updateStats)
     .then(function(resp) {
-      if (resp == true)
-        return res.send('Place created');
-      else
-        return res.send('Failed to create');
-    })
-    .catch(function(error) {
-      return res.send(error);
-    })
-});
-
-function addNewPlaceToUser(aPlace, response) {
-  console.log('Adding new place to user')
-  var idCount = response.data.idCounter || 0;
-  var placeCount = response.data.placeCount || 0;
-  response.data.idCounter = idCount + 1;
-  response.data.placeCount = placeCount + 1;
-  aPlace.id = response.data.idCounter;
-  return Q.try(function() {
-      return dbTalks.getProperty('users', aPlace.createdBy);
-    })
-    .then(function(resp) {
-      resp.data.places.push(aPlace.place);
-      return dbTalks.putProperty('users', aPlace.createdBy,
-                                 resp.data, resp.ref);
-    })
-    .then(function(resp) {
-      return [aPlace, response];
+      return res.json(resp);
     })
     .catch(function(err) {
-      throw new Error('Failed to update places in user');
+      return res.json(err);
     });
-}
+});
 
-function addNewPlace(aPlace, statsResp) {
-  console.log('adding new place to places');
-  return [aPlace, statsResp, dbTalks.putProperty('places', aPlace.id, aPlace)]
-}
-
+/*
 function createUniquePlace(aPlace, countStatus, resp) {
   console.log('creating unique place');
   if (resp == true) {
@@ -149,33 +105,44 @@ function updateStats(countStatus, resp) {
   return dbTalks.putProperty('stats', 'counts',
                              countStatus.data, countStatus.ref);
 }
-
+*/
 
 // Delete a place
-app.post('/place/remove', function(req, res, next) {
+app.post('/place/remove', function(req, res) {
   var r = req.body;
-  var target = {
+  var aPlace = {
     name: r.name,
-    apikey: r.apikey
+    creator: r.username
   };
 
   return Q.try(function() {
-      return [target, dbTalks.getProperty('placeid', target.name)]
+      return userOperations.verifyUserKey(aPlace.creator, r.apikey);
     })
-    .spread(getPlaces) 
-    .spread(verifyAPIkey)
-    .spread(removePlaceid)
-    .spread(removePlaceFromUser)
-    .spread(getStats)
-    .spread(updateStatsRemove)
     .then(function(resp) {
-      return res.send('place removed successfully');
+      if (resp.success === true) {
+        var i = 0;
+        while (i < resp.extras.data.places.length) {
+          if (resp.extras.data.places[i].name == aPlace.name) {
+            aPlace.id = resp.extras.data.places[i].id;
+            break;
+          }
+          i++;
+        }
+        return placeOperations.deletePlace(aPlace);
+      }
+      else {
+        return { success: false };
+      }
     })
-    .catch(function(error) {
-      return res.send(error);
+    .then(function(resp) {
+      return res.json(resp);
     })
+    .catch(function(err) {
+      return res.json(err);
+    });
 });
 
+/*
 function getPlaces(target, response) {
   return [target, dbTalks.getProperty('places', response.data.id)];
 }

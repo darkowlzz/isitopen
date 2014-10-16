@@ -37,39 +37,10 @@ describe('Create a duplicate user', function() {
   });
 });
 
-describe('Delete user', function() {
-  it('POST /user/remove', function(done) {
-    this.timeout(15000);
-    request(app)
-      .post('/user/remove')
-      .send({ username: username, apikey: apikey })
-      .expect(200)
-      .expect(function(res) {
-        res.body.success.should.be.true;
-      })
-      .end(done);
-  });
-});
-
-describe('Delete already deleted user', function() {
-  it('POST /user/remove', function(done) {
-    this.timeout(15000);
-    request(app)
-      .post('/user/remove')
-      .send({ username: username, apikey: apikey })
-      .expect(200)
-      .expect(function(res) {
-        res.body.success.should.be.false;
-      })
-      .end(done);
-  });
-});
-/*
 
 // Tests on places
 
-var placeName = 'cakewalk';
-var regexp = new RegExp('(?:' + placeName + ')');
+var placeName = 'cakewalk' + parseInt(Math.random()*1000);
 
 describe('Create a new place', function() {
   it('POST /place/create', function(done) {
@@ -78,12 +49,16 @@ describe('Create a new place', function() {
       .post('/place/create')
       .send({ name: placeName, location: 'moose', coordinates: '45,12',
               apikey: apikey, username: username })
-      .expect(/(?:Place created)/)
       .expect(200)
+      .expect(function(res) {
+        res.body.success.should.be.true;
+        res.body.placeId.should.be.a.Number;
+      })
       .end(done);
-  })
+  });
 });
 
+/*
 describe('Query a place', function() {
   it('GET /place/' + placeName, function(done) {
     this.timeout(15000);
@@ -96,20 +71,23 @@ describe('Query a place', function() {
       .end(done);
   })
 });
+*/
 
 describe('Delete a place', function() {
   it('POST /place/remove', function(done) {
     this.timeout(15000);
     request(app)
       .post('/place/remove')
-      .send({ name: placeName, apikey: apikey })
-      .expect(/(?:place removed)/)
+      .send({ name: placeName, username: username, apikey: apikey })
       .expect(200)
+      .expect(function(res) {
+        res.body.success.should.be.true;
+      })
       .end(done);
-  })
+  });
 });
 
-
+/*
 // Tests on stats
 var idCounter, placeCount, userCount; // store the defaults
 
@@ -179,3 +157,31 @@ describe('Resetting stats', function() {
   })
 });
 */
+
+describe('Delete user', function() {
+  it('POST /user/remove', function(done) {
+    this.timeout(15000);
+    request(app)
+      .post('/user/remove')
+      .send({ username: username, apikey: apikey })
+      .expect(200)
+      .expect(function(res) {
+        res.body.success.should.be.true;
+      })
+      .end(done);
+  });
+});
+
+describe('Delete already deleted user', function() {
+  it('POST /user/remove', function(done) {
+    this.timeout(15000);
+    request(app)
+      .post('/user/remove')
+      .send({ username: username, apikey: apikey })
+      .expect(200)
+      .expect(function(res) {
+        res.body.success.should.be.false;
+      })
+      .end(done);
+  });
+});
