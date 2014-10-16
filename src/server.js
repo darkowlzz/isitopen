@@ -2,6 +2,7 @@ var express = require('express'),
     //morgan = require('morgan'),
     bodyParser = require('body-parser'),
     Q = require('q'),
+    //utils = require('./helpers/utils'),
     userOperations = require('./helpers/userOperations');
 
 var app = express();
@@ -58,16 +59,23 @@ app.post('/place/create', function(req, res, next) {
     tags: r.tags || 'unknown',
     products: r.products || 'unknown',
     desc: r.description || 'unknown',
-    createdBy: r.username || 'unknown',
-    id: '',
+    creator: r.username || 'unknown',
     apikeys: [r.apikey] || 'unknown',
     lastUpdated: 'unknown'
   };
 
   return Q.try(function() {
-      console.log('getting users');
-      //return [aPlace, dbTalks.getProperty('stats', 'counts')]
-      return [aPlace, dbTalks.getProperty('users', aPlace.createdBy)];
+      return userOperations.verifyUserKey(aPlace.creator);
+    })
+    .then(function(resp) {
+      if (resp.success === true) {
+        return userOperations.createPlace(aPlace);
+      }
+      else {
+        return {
+          success: false
+        };
+      }
     })
     .spread(function(target, resp) {
       if (resp.data.apikeys.indexOf(target.apikey[0]) > -1) {

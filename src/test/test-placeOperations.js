@@ -13,6 +13,16 @@ var placeName1 = 'fakeplace' + parseInt(Math.random()*1000);
 var placeId1 = 'fakePlaceId' + parseInt(Math.random()*1000);
 var placeId2;
 
+var aPlace1 = {
+  creator: username1,
+  name: placeName1,
+  location: 'knock knock',
+  coordinates: '11.1, 32.1',
+  tags: 'none',
+  desc: 'foo foo',
+  id: placeId1
+};
+
 const DURATION = 25000;
 
 describe('Preparing for placeOperations test...', function() {
@@ -83,31 +93,8 @@ describe('testing elementary units', function() {
   it('register new place', function(done) {
     this.timeout(DURATION);
     Q.try(function() {
-      var aPlace = {
-        creator: username1,
-        token: token,
-        placeName: placeName1,
-        location: 'knock knock',
-        coordinates: '11.1, 32.1',
-        tags: 'none',
-        desc: 'foo foo',
-        id: placeId1
-      };
-      return placeOperations.registerPlace(aPlace);
-    })
-    .then(function(resp) {
-      resp.success.should.be.true;
-      done();
-    })
-    .catch(function(err) {
-      return done(err);
-    });
-  });
-
-  it('deregister the registered place', function(done) {
-    this.timeout(DURATION);
-    Q.try(function() {
-      return placeOperations.deregisterPlace(placeId1);
+      aPlace1.token = token;
+      return placeOperations.registerPlace(aPlace1);
     })
     .then(function(resp) {
       resp.success.should.be.true;
@@ -133,6 +120,34 @@ describe('testing elementary units', function() {
     });
   });
 
+  it('place should be added to user', function(done) {
+    this.timeout(DURATION);
+    Q.try(function() {
+      return placeOperations.addPlaceToUser(aPlace1);
+    })
+    .then(function(resp) {
+      resp.success.should.be.true;
+      done();
+    })
+    .catch(function(err) {
+      return done(err);
+    });
+  });
+
+  it('deregister the registered place', function(done) {
+    this.timeout(DURATION);
+    Q.try(function() {
+      return placeOperations.deregisterPlace(placeId1);
+    })
+    .then(function(resp) {
+      resp.success.should.be.true;
+      done();
+    })
+    .catch(function(err) {
+      return done(err);
+    });
+  });
+
   it('place counter should be decremented', function(done) {
     this.timeout(DURATION);
     Q.try(function() {
@@ -141,6 +156,20 @@ describe('testing elementary units', function() {
     .then(function(resp) {
       resp.success.should.be.true;
       resp.placeCount.should.be.exactly(placeCount);
+      done();
+    })
+    .catch(function(err) {
+      return done(err);
+    });
+  });
+
+  it('place should be removed from user', function(done) {
+    this.timeout(DURATION);
+    Q.try(function() {
+      return placeOperations.removePlaceFromUser(aPlace1);
+    })
+    .then(function(resp) {
+      resp.success.should.be.true;
       done();
     })
     .catch(function(err) {
@@ -156,7 +185,7 @@ describe('create place', function() {
       var place = {
         creator: username1,
         token: token,
-        placeName: 'express hub',
+        name: 'express hub',
         location: 'node land',
         coordinates: '23.34, 12.11',
         tags: 'none',
@@ -181,7 +210,9 @@ describe('delete place', function() {
     this.timeout(DURATION);
     Q.try(function() {
       var aPlace = {
-        id: placeId2
+        id: placeId2,
+        name: 'express hub',
+        creator: username1
       };
       return placeOperations.deletePlace(aPlace);
     })
