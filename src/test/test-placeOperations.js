@@ -6,7 +6,7 @@ var placeOperations = require('../helpers/placeOperations');
 var dbTalks = require('../helpers/dbTalks');
 var Q = require('q');
 
-var username1 = 'fakeuser' + parseInt(Math.random()* 1000);
+var username1 = 'fakeuser' + parseInt(Math.random()*1000);
 var token;
 var idCounter, placeCount, userCount;
 var placeName1 = 'fakeplace' + parseInt(Math.random()*1000);

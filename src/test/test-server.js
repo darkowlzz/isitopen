@@ -1,7 +1,10 @@
+/* jshint expr:true */
+/* global describe, it */
+
 var request = require('supertest'),
     app = require('../server').app;
 
-var username = 'nyancat27';
+var username = 'nyancat' + parseInt(Math.random()*1000);
 var apikey;
 
 // Tests on user account
@@ -13,12 +16,11 @@ describe('Create new user', function() {
       .send({ username: username })
       .expect(200)
       .expect(function(res) {
-        apikey = res.text;
-        if (res.text.length !== 36)
-          throw new Error('apikey length is not 36');
+        apikey = res.body.key;
+        apikey.should.have.length(36);
       })
       .end(done);
-  })
+  });
 });
 
 describe('Create a duplicate user', function() {
@@ -28,10 +30,12 @@ describe('Create a duplicate user', function() {
       .post('/user/create')
       .send({ username: username })
       .expect(200)
-      .expect(/(?:Username alredy used)/)
+      .expect(function(res) {
+        res.body.should.have.property('error');
+      })
       .end(done);
-  })
-})
+  });
+});
 
 describe('Delete user', function() {
   it('POST /user/remove', function(done) {
@@ -40,9 +44,11 @@ describe('Delete user', function() {
       .post('/user/remove')
       .send({ username: username, apikey: apikey })
       .expect(200)
-      .expect(/(?:User removed)/)
+      .expect(function(res) {
+        res.body.success.should.be.true;
+      })
       .end(done);
-  })
+  });
 });
 
 describe('Delete already deleted user', function() {
@@ -52,11 +58,13 @@ describe('Delete already deleted user', function() {
       .post('/user/remove')
       .send({ username: username, apikey: apikey })
       .expect(200)
-      .expect(/(?:Failed to delete user)/)
+      .expect(function(res) {
+        res.body.success.should.be.false;
+      })
       .end(done);
-  })
+  });
 });
-
+/*
 
 // Tests on places
 
@@ -170,3 +178,4 @@ describe('Resetting stats', function() {
       .end(done)
   })
 });
+*/
